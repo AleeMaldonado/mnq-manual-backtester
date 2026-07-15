@@ -2,110 +2,80 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MNQ Manual Backtester</title>
 <style>
-  :root {
-    --bg: #0d0d0f;
-    --bg2: #141417;
-    --bg3: #1c1c22;
-    --border: #2a2a35;
-    --text: #e2e2e8;
-    --text2: #888896;
-    --green: #26a69a;
-    --red: #ef5350;
-    --blue: #4a9eff;
-    --yellow: #ffd54f;
-    --win: #26a69a;
-    --loss: #ef5350;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; font-size: 13px; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+:root {
+  --bg:#0d0d0f; --bg2:#141417; --bg3:#1c1c22; --border:#2a2a35;
+  --text:#e2e2e8; --text2:#888896; --green:#26a69a; --red:#ef5350;
+  --blue:#4a9eff; --yellow:#ffd54f;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;font-size:13px;overflow:hidden;height:100vh;display:flex;flex-direction:column}
 
-  /* TOP BAR */
-  #topbar { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; }
-  #topbar h1 { font-size: 13px; font-weight: 600; color: var(--blue); letter-spacing: 0.05em; margin-right: 4px; }
-  .tf-btn { padding: 4px 10px; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--text2); cursor: pointer; font-size: 12px; transition: all 0.15s; }
-  .tf-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
-  .tf-btn:hover:not(.active) { border-color: var(--blue); color: var(--blue); }
-  #date-display { color: var(--yellow); font-size: 12px; font-family: monospace; margin-left: auto; }
-  #price-display { color: var(--text); font-size: 13px; font-family: monospace; }
-  .sep { width: 1px; height: 18px; background: var(--border); }
+#topbar{display:flex;align-items:center;gap:10px;padding:7px 14px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0}
+#topbar h1{font-size:13px;font-weight:700;color:var(--blue);letter-spacing:.05em}
+.tf-btn{padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text2);cursor:pointer;font-size:12px;transition:all .15s}
+.tf-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.tf-btn:hover:not(.active){border-color:var(--blue);color:var(--blue)}
+#date-display{color:var(--yellow);font-size:12px;font-family:monospace;margin-left:auto}
+#price-display{color:var(--text);font-size:13px;font-family:monospace;min-width:80px}
+.sep{width:1px;height:18px;background:var(--border)}
 
-  /* MAIN LAYOUT */
-  #main { display: flex; flex: 1; overflow: hidden; }
+#main{display:flex;flex:1;overflow:hidden}
 
-  /* CHART */
-  #chart-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-  #chart-wrap { flex: 1; position: relative; }
-  canvas#chart { display: block; width: 100%; height: 100%; cursor: crosshair; }
-  #price-scale { position: absolute; right: 0; top: 0; bottom: 0; width: 70px; pointer-events: none; }
+#chart-wrap{flex:1;position:relative;overflow:hidden}
+canvas#chart{display:block;width:100%;height:100%;cursor:crosshair}
+#crosshair-h{position:absolute;height:1px;background:rgba(255,255,255,.12);left:0;right:70px;pointer-events:none}
+#crosshair-v{position:absolute;width:1px;background:rgba(255,255,255,.12);top:0;bottom:0;pointer-events:none}
+#no-data{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:15px;background:var(--bg)}
 
-  /* SIDEBAR */
-  #sidebar { width: 260px; background: var(--bg2); border-left: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; }
+#sidebar{width:265px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.panel{padding:12px;border-bottom:1px solid var(--border)}
+.ptitle{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.row{display:flex;gap:6px;align-items:center;margin-bottom:7px}
+.row label{font-size:11px;color:var(--text2);min-width:54px}
+input[type=number],input[type=date],select{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;font-size:12px}
+input[type=number]{width:75px}
+input[type=date]{flex:1}
 
-  /* CONTROLS */
-  .panel { padding: 12px; border-bottom: 1px solid var(--border); }
-  .panel-title { font-size: 10px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
-  .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-  .row label { font-size: 11px; color: var(--text2); min-width: 55px; }
-  .row input[type=number] { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; width: 80px; font-size: 12px; }
-  .row input[type=number]:focus { outline: none; border-color: var(--blue); }
-  .info-val { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; font-family: monospace; }
+/* Botones de playback */
+.btn-row{display:flex;gap:6px;margin-bottom:7px}
+.btn-green{flex:1;padding:9px;background:var(--green);border:none;border-radius:6px;color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+.btn-red{flex:1;padding:9px;background:var(--red);border:none;border-radius:6px;color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+.btn-blue{flex:1;padding:7px;background:var(--blue);border:none;border-radius:5px;color:#fff;font-size:12px;font-weight:600;cursor:pointer}
+.btn-gray{flex:1;padding:7px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:12px;cursor:pointer}
+.btn-gray:hover{border-color:var(--blue);color:var(--blue)}
+.btn-green:disabled,.btn-red:disabled{opacity:.35;cursor:not-allowed}
 
-  /* TRADE BUTTONS */
-  #btn-long  { flex: 1; padding: 10px; background: var(--green); border: none; border-radius: 6px; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
-  #btn-short { flex: 1; padding: 10px; background: var(--red);   border: none; border-radius: 6px; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
-  #btn-long:hover  { opacity: 0.85; }
-  #btn-short:hover { opacity: 0.85; }
-  #btn-long:disabled, #btn-short:disabled { opacity: 0.35; cursor: not-allowed; }
+/* Estado del trade */
+#trade-status{padding:7px 10px;border-radius:5px;font-size:12px;margin-bottom:8px;display:none}
+#trade-status.open{background:rgba(74,158,255,.1);border:1px solid rgba(74,158,255,.3);color:var(--blue);display:block}
+#trade-status.win{background:rgba(38,166,154,.1);border:1px solid rgba(38,166,154,.3);color:var(--green);display:block}
+#trade-status.loss{background:rgba(239,83,80,.1);border:1px solid rgba(239,83,80,.3);color:var(--red);display:block}
 
-  /* PLAYBACK */
-  #btn-play  { flex: 1; padding: 7px; background: var(--blue); border: none; border-radius: 5px; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; }
-  #btn-step  { padding: 7px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-size: 12px; cursor: pointer; }
-  #btn-step:hover { border-color: var(--blue); color: var(--blue); }
-  #speed-sel { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 4px 6px; border-radius: 4px; font-size: 11px; }
+/* Stats */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stat-box{background:var(--bg3);border-radius:5px;padding:8px;text-align:center}
+.stat-val{font-size:16px;font-weight:700;font-family:monospace}
+.stat-lbl{font-size:10px;color:var(--text2);margin-top:2px}
 
-  /* DATE JUMP */
-  #date-input { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 12px; flex: 1; }
-  #btn-go { padding: 4px 10px; background: var(--blue); border: none; border-radius: 4px; color: #fff; font-size: 12px; cursor: pointer; }
+/* Log */
+#trade-log{flex:1;overflow-y:auto;padding:6px}
+.tentry{display:flex;justify-content:space-between;padding:5px 8px;border-radius:4px;margin-bottom:3px;font-size:11px;background:var(--bg3)}
+.win-c{color:var(--green);font-weight:600}
+.loss-c{color:var(--red);font-weight:600}
 
-  /* TRADE STATUS */
-  #trade-status { padding: 8px 10px; border-radius: 6px; margin-bottom: 8px; font-size: 12px; display: none; }
-  #trade-status.open { background: rgba(74,158,255,0.1); border: 1px solid rgba(74,158,255,0.3); color: var(--blue); display: block; }
-  #trade-status.win  { background: rgba(38,166,154,0.1); border: 1px solid rgba(38,166,154,0.3); color: var(--win); display: block; }
-  #trade-status.loss { background: rgba(239,83,80,0.1);  border: 1px solid rgba(239,83,80,0.3);  color: var(--loss); display: block; }
+#bottombar{background:var(--bg2);border-top:1px solid var(--border);padding:4px 14px;font-size:11px;color:var(--text2);flex-shrink:0;display:flex;gap:16px}
+.hk{color:var(--text)}
 
-  /* STATS */
-  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  .stat-box { background: var(--bg3); border-radius: 5px; padding: 8px; text-align: center; }
-  .stat-val { font-size: 16px; font-weight: 700; font-family: monospace; }
-  .stat-lbl { font-size: 10px; color: var(--text2); margin-top: 2px; }
-  .green { color: var(--green); }
-  .red   { color: var(--red);   }
-  .blue  { color: var(--blue);  }
+/* Day navigator */
+#day-nav{display:flex;align-items:center;gap:4px;margin-bottom:7px}
+#day-nav button{padding:4px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;font-size:13px}
+#day-nav button:hover{border-color:var(--blue)}
+#day-label{flex:1;text-align:center;font-size:11px;color:var(--yellow);font-family:monospace}
 
-  /* TRADE LOG */
-  #trade-log { flex: 1; overflow-y: auto; padding: 8px; }
-  .trade-entry { display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; border-radius: 4px; margin-bottom: 4px; font-size: 11px; background: var(--bg3); }
-  .trade-entry .dir { font-weight: 600; width: 40px; }
-  .trade-entry .win-cls { color: var(--win); font-weight: 600; }
-  .trade-entry .loss-cls { color: var(--loss); font-weight: 600; }
-
-  /* CROSSHAIR */
-  #crosshair-h, #crosshair-v { position: absolute; pointer-events: none; }
-  #crosshair-h { height: 1px; background: rgba(255,255,255,0.15); left: 0; right: 70px; }
-  #crosshair-v { width: 1px; background: rgba(255,255,255,0.15); top: 0; bottom: 0; }
-
-  /* LEVEL TOOL */
-  .level-line { position: absolute; left: 0; right: 70px; height: 1px; background: var(--yellow); pointer-events: none; opacity: 0.8; }
-  .level-label { position: absolute; right: 72px; font-size: 10px; color: var(--yellow); font-family: monospace; transform: translateY(-50%); }
-
-  #no-data { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text2); font-size: 15px; }
-
-  /* BOTTOM BAR */
-  #bottombar { background: var(--bg2); border-top: 1px solid var(--border); padding: 4px 14px; font-size: 11px; color: var(--text2); flex-shrink: 0; display: flex; gap: 20px; }
-  .hotkey { color: var(--text); }
+/* Speed */
+#replay-speed{font-size:11px;padding:3px 6px}
 </style>
 </head>
 <body>
@@ -122,391 +92,409 @@
 </div>
 
 <div id="main">
-  <div id="chart-container">
-    <div id="chart-wrap">
-      <canvas id="chart"></canvas>
-      <div id="crosshair-h"></div>
-      <div id="crosshair-v"></div>
-      <div id="price-scale"></div>
-      <div id="no-data">Cargando datos...</div>
-    </div>
+  <div id="chart-wrap">
+    <canvas id="chart"></canvas>
+    <div id="crosshair-h"></div>
+    <div id="crosshair-v"></div>
+    <div id="no-data">Cargando datos...</div>
   </div>
 
   <div id="sidebar">
 
-    <!-- PLAYBACK -->
+    <!-- NAVEGACIÓN DE DÍAS -->
     <div class="panel">
-      <div class="panel-title">Playback</div>
+      <div class="ptitle">Fecha de inicio</div>
       <div class="row">
-        <button id="btn-play">▶ Play</button>
-        <button id="btn-step">+1 vela</button>
-        <select id="speed-sel">
-          <option value="500">0.5s</option>
-          <option value="200" selected>0.2s</option>
-          <option value="100">0.1s</option>
-          <option value="50">Rápido</option>
+        <input type="date" id="date-input" value="2024-09-02">
+        <button class="btn-blue" id="btn-go" style="padding:4px 10px;flex:0 0 auto">Ir</button>
+      </div>
+      <div id="day-nav">
+        <button id="btn-prev-day">◀</button>
+        <span id="day-label">—</span>
+        <button id="btn-next-day">▶</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn-blue" id="btn-replay">▶ Replay día</button>
+        <select id="replay-speed">
+          <option value="300">Lento</option>
+          <option value="100" selected>Normal</option>
+          <option value="30">Rápido</option>
+          <option value="5">Turbo</option>
         </select>
       </div>
-      <div class="row">
-        <button id="btn-zoom-in"  style="flex:1;padding:5px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;font-size:13px">🔍+</button>
-        <button id="btn-zoom-out" style="flex:1;padding:5px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;font-size:13px">🔍-</button>
-        <span style="font-size:10px;color:var(--text2);align-self:center">Ctrl+scroll</span>
-      </div>
-      <div class="row">
-        <input type="date" id="date-input" value="2024-09-01">
-        <button id="btn-go">Ir</button>
+      <div class="btn-row">
+        <button class="btn-gray" id="btn-zoom-in">🔍+</button>
+        <button class="btn-gray" id="btn-zoom-out">🔍-</button>
+        <button class="btn-gray" id="btn-step">+1 vela</button>
       </div>
     </div>
 
-    <!-- TRADE -->
+    <!-- OPERACIÓN -->
     <div class="panel">
-      <div class="panel-title">Nueva operación</div>
+      <div class="ptitle">Nueva operación</div>
       <div id="trade-status"></div>
       <div class="row">
         <label>Contratos</label>
-        <input type="number" id="inp-contracts" value="5" min="1" max="20">
-        <span id="disp-tick" class="info-val" style="font-size:11px;color:var(--text2)">1pt=$10</span>
+        <input type="number" id="inp-c" value="5" min="1" max="20">
+        <span id="disp-tick" style="font-size:11px;color:var(--text2)">1pt=$10</span>
       </div>
       <div class="row">
         <label>TP ($)</label>
-        <input type="number" id="inp-tp" value="2000" min="100">
-        <span id="disp-tp-pts" class="info-val" style="font-size:11px"></span>
+        <input type="number" id="inp-tp" value="2000">
+        <span id="disp-tp" style="font-size:11px;color:var(--green)"></span>
       </div>
       <div class="row">
         <label>SL ($)</label>
-        <input type="number" id="inp-sl" value="2000" min="100">
-        <span id="disp-sl-pts" class="info-val" style="font-size:11px"></span>
+        <input type="number" id="inp-sl" value="2000">
+        <span id="disp-sl" style="font-size:11px;color:var(--red)"></span>
       </div>
-      <div class="row" style="margin-top:10px">
-        <button id="btn-long">▲ LONG</button>
-        <button id="btn-short">▼ SHORT</button>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn-green" id="btn-long">▲ LONG</button>
+        <button class="btn-red" id="btn-short">▼ SHORT</button>
       </div>
-      <div style="margin-top:6px">
-        <button id="btn-close" style="width:100%;padding:6px;background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--text2);cursor:pointer;font-size:11px;display:none">Cerrar manualmente</button>
-      </div>
+      <button id="btn-close" class="btn-gray" style="width:100%;display:none;margin-top:4px">Cerrar manualmente</button>
     </div>
 
-    <!-- STATS -->
+    <!-- ESTADÍSTICAS -->
     <div class="panel">
-      <div class="panel-title">Estadísticas</div>
+      <div class="ptitle">Estadísticas</div>
       <div class="stat-grid">
-        <div class="stat-box"><div class="stat-val green" id="st-wins">0</div><div class="stat-lbl">WIN</div></div>
-        <div class="stat-box"><div class="stat-val red" id="st-loss">0</div><div class="stat-lbl">LOSS</div></div>
-        <div class="stat-box"><div class="stat-val blue" id="st-wr">—</div><div class="stat-lbl">Win Rate</div></div>
-        <div class="stat-box"><div class="stat-val" id="st-pnl">$0</div><div class="stat-lbl">PnL Total</div></div>
+        <div class="stat-box"><div class="stat-val" style="color:var(--green)" id="st-w">0</div><div class="stat-lbl">WIN</div></div>
+        <div class="stat-box"><div class="stat-val" style="color:var(--red)" id="st-l">0</div><div class="stat-lbl">LOSS</div></div>
+        <div class="stat-box"><div class="stat-val" style="color:var(--blue)" id="st-wr">—</div><div class="stat-lbl">Win Rate</div></div>
+        <div class="stat-box"><div class="stat-val" id="st-pnl">$0</div><div class="stat-lbl">PnL</div></div>
       </div>
     </div>
 
     <!-- LOG -->
     <div class="panel" style="border-bottom:none;padding-bottom:4px">
-      <div class="panel-title">Historial</div>
+      <div class="ptitle">Historial</div>
     </div>
     <div id="trade-log"></div>
-
   </div>
 </div>
 
 <div id="bottombar">
-  <span><span class="hotkey">Espacio</span> — avanzar vela</span>
-  <span><span class="hotkey">L</span> — dibujar nivel</span>
-  <span><span class="hotkey">X</span> — borrar niveles</span>
-  <span><span class="hotkey">←→</span> — navegar</span>
-  <span><span class="hotkey">Ctrl+Scroll</span> — zoom</span>
-  <span><span class="hotkey">Arrastrar</span> — mover gráfico</span>
+  <span><span class="hk">Espacio</span> avanzar vela</span>
+  <span><span class="hk">◀▶</span> día anterior/siguiente</span>
+  <span><span class="hk">L</span> dibujar nivel</span>
+  <span><span class="hk">X</span> borrar niveles</span>
+  <span><span class="hk">Ctrl+Scroll</span> zoom</span>
+  <span><span class="hk">Arrastrar</span> mover</span>
 </div>
 
 <script>
-// ─── DATA ─────────────────────────────────────────────────────────────────────
+// ─── DATOS ────────────────────────────────────────────────────────────────────
 let RAW = null;
-let CANDLES = [];       // array activo de velas
+let ALL_CANDLES = {};   // { m130:[], m15:[], m5:[] }
 let TF = 'm15';
-let viewStart = 0;      // índice primera vela visible
-let viewEnd = 0;        // índice última vela visible (el "presente")
-let VISIBLE = 60;       // cuántas velas mostrar
-let levels = [];        // líneas horizontales dibujadas
+let CANDLES = [];
+
+// Estado del replay
+let replayEnd = 0;      // índice de la última vela visible (el "presente")
+let VISIBLE   = 60;     // cuántas velas mostrar
+let levels    = [];
 let drawingLevel = false;
-let playing = false;
-let playTimer = null;
+let replayTimer  = null;
+let isReplaying  = false;
 
-// Trade state
-let trade = null; // { dir, entry, tp, sl, tpPrice, slPrice, bar }
+// Días disponibles
+let DAYS = [];          // array de fechas únicas 'YYYY-MM-DD'
+let currentDayIdx = 0;  // índice del día actual en DAYS
+let dayStartIdx   = 0;  // índice de la primera vela del día actual
 
-// Stats
-let stats = { wins: 0, losses: 0, pnl: 0, trades: [] };
+// Trade
+let trade = null;
+let stats = { w:0, l:0, pnl:0 };
 
-// ─── LOAD DATA ────────────────────────────────────────────────────────────────
-fetch('https://backtestingnq.netlify.app/data.json').then(r => r.json()).then(data => {
-  RAW = data;
-  document.getElementById('no-data').style.display = 'none';
-  setTF('m15');
-  jumpToDate('2024-09-01');
-  updateParamDisplay();
-}).catch(e => {
-  document.getElementById('no-data').textContent = 'Error cargando datos. Asegúrate de servir desde un servidor local.';
-});
+// ─── CARGA ────────────────────────────────────────────────────────────────────
+fetch('https://backtestingnq.netlify.app/data.json')
+  .then(r => r.json())
+  .then(data => {
+    RAW = data;
+    document.getElementById('no-data').style.display = 'none';
+    parseAll();
+    setTF('m15');
+    goToDate(document.getElementById('date-input').value);
+    updateParams();
+  })
+  .catch(() => {
+    document.getElementById('no-data').textContent = 'Error cargando datos.';
+  });
 
 function parseFlat(arr) {
   const out = [];
-  for (let i = 0; i < arr.length; i += 5) {
+  for (let i = 0; i < arr.length; i += 5)
     out.push({ t: arr[i], o: arr[i+1], h: arr[i+2], l: arr[i+3], c: arr[i+4] });
-  }
   return out;
+}
+
+function parseAll() {
+  ALL_CANDLES = {
+    m130: parseFlat(RAW.m130),
+    m15:  parseFlat(RAW.m15),
+    m5:   parseFlat(RAW.m5)
+  };
+  // Calcular días únicos de M15
+  const seen = new Set();
+  for (const c of ALL_CANDLES.m15) {
+    const d = ntDate(c.t);
+    if (!seen.has(d)) { seen.add(d); DAYS.push(d); }
+  }
+}
+
+function ntDate(ts) {
+  // UTC+1 fijo (NinjaTrader)
+  return new Date((ts + 3600) * 1000).toISOString().slice(0,10);
+}
+function ntTime(ts) {
+  const d = new Date((ts + 3600) * 1000);
+  return d.toISOString().slice(11,16);
 }
 
 function setTF(tf) {
   TF = tf;
   document.querySelectorAll('.tf-btn').forEach(b => b.classList.toggle('active', b.dataset.tf === tf));
-  CANDLES = parseFlat(RAW[tf]);
-  VISIBLE = tf === 'm130' ? 30 : tf === 'm15' ? 60 : 80;
-  if (viewEnd === 0 || viewEnd >= CANDLES.length) {
-    viewEnd = Math.min(CANDLES.length - 1, 100);
-  }
-  levels = [];
-  render();
+  CANDLES = ALL_CANDLES[tf] || [];
+  VISIBLE  = tf === 'm130' ? 30 : tf === 'm15' ? 60 : 80;
+  levels   = [];
+  // Recalcular replayEnd para el día actual
+  if (DAYS.length) setDay(currentDayIdx, false);
+  else render();
 }
 
-function jumpToDate(dateStr) {
-  const ts = new Date(dateStr + 'T14:30:00Z').getTime() / 1000;
-  let idx = CANDLES.findIndex(c => c.t >= ts);
-  if (idx < 0) idx = CANDLES.length - 1;
-  viewEnd = Math.min(idx + 5, CANDLES.length - 1);
-  render();
+// ─── NAVEGACIÓN DE DÍAS ───────────────────────────────────────────────────────
+function goToDate(dateStr) {
+  const idx = DAYS.indexOf(dateStr);
+  if (idx >= 0) setDay(idx, true);
+  else {
+    // Buscar el día más cercano
+    let closest = 0;
+    for (let i = 0; i < DAYS.length; i++) {
+      if (DAYS[i] <= dateStr) closest = i;
+    }
+    setDay(closest, true);
+  }
+}
+
+function setDay(idx, resetLevels) {
+  currentDayIdx = Math.max(0, Math.min(DAYS.length - 1, idx));
+  const day = DAYS[currentDayIdx];
+  document.getElementById('day-label').textContent = day;
+  document.getElementById('date-input').value = day;
+
+  if (resetLevels) levels = [];
+
+  // Encontrar la última vela del día actual como replayEnd
+  // (mostrar todo hasta el final del día)
+  let lastIdx = -1;
+  for (let i = 0; i < CANDLES.length; i++) {
+    if (ntDate(CANDLES[i].t) === day) lastIdx = i;
+  }
+  // Encontrar la primera vela del día
+  dayStartIdx = -1;
+  for (let i = 0; i < CANDLES.length; i++) {
+    if (ntDate(CANDLES[i].t) === day) { dayStartIdx = i; break; }
+  }
+
+  if (lastIdx >= 0) {
+    replayEnd = lastIdx;
+    render();
+  }
 }
 
 // ─── CANVAS ───────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('chart');
-const ctx = canvas.getContext('2d');
-const PRICE_SCALE_W = 70;
-const PADDING_TOP = 20;
-const PADDING_BOT = 30;
+const ctx    = canvas.getContext('2d');
+const PW     = 70;   // price scale width
+const PT     = 20;   // padding top
+const PB     = 30;   // padding bottom
 
 function resize() {
-  const wrap = document.getElementById('chart-wrap');
-  canvas.width  = wrap.clientWidth;
-  canvas.height = wrap.clientHeight;
+  const w = document.getElementById('chart-wrap');
+  canvas.width  = w.clientWidth;
+  canvas.height = w.clientHeight;
   render();
 }
 window.addEventListener('resize', resize);
-setTimeout(resize, 100);
+setTimeout(resize, 200);
 
 function getVisible() {
-  const start = Math.max(0, viewEnd - VISIBLE + 1);
-  return CANDLES.slice(start, viewEnd + 1);
+  const start = Math.max(0, replayEnd - VISIBLE + 1);
+  return CANDLES.slice(start, replayEnd + 1);
 }
 
 function render() {
   if (!CANDLES.length) return;
-  const W = canvas.width - PRICE_SCALE_W;
-  const H = canvas.height - PADDING_TOP - PADDING_BOT;
+  const W = canvas.width - PW;
+  const H = canvas.height - PT - PB;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const visible = getVisible();
-  if (!visible.length) return;
+  const vis = getVisible();
+  if (!vis.length) return;
 
-  // Price range
+  // Rango de precios
   let lo = Infinity, hi = -Infinity;
-  for (const c of visible) { lo = Math.min(lo, c.l); hi = Math.max(hi, c.h); }
-  // Add trade lines to range
-  if (trade) { lo = Math.min(lo, trade.slPrice); hi = Math.max(hi, trade.tpPrice); }
-  for (const lv of levels) { lo = Math.min(lo, lv.price); hi = Math.max(hi, lv.price); }
+  for (const c of vis) { lo = Math.min(lo, c.l); hi = Math.max(hi, c.h); }
+  if (trade) { lo = Math.min(lo, trade.slP, trade.tpP); hi = Math.max(hi, trade.slP, trade.tpP); }
+  for (const lv of levels) { lo = Math.min(lo, lv.p); hi = Math.max(hi, lv.p); }
   const range = hi - lo || 10;
-  const pad = range * 0.05;
-  lo -= pad; hi += pad;
+  lo -= range * .06; hi += range * .06;
+  const pY = p => PT + (1 - (p - lo) / (hi - lo)) * H;
 
-  const pToY = p => PADDING_TOP + (1 - (p - lo) / (hi - lo)) * H;
-  const cw = W / visible.length;
-  const bw = Math.max(1, cw * 0.7);
+  const cw = W / vis.length;
+  const bw = Math.max(1, cw * .65);
 
   // Grid
-  ctx.strokeStyle = '#1e1e28';
-  ctx.lineWidth = 1;
-  const gridCount = 6;
-  for (let i = 0; i <= gridCount; i++) {
-    const y = PADDING_TOP + (H / gridCount) * i;
+  ctx.strokeStyle = '#1a1a25'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 6; i++) {
+    const y = PT + H / 6 * i;
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-    const price = hi - (hi - lo) * i / gridCount;
-    ctx.fillStyle = '#555566';
-    ctx.font = '10px monospace';
-    ctx.fillText(price.toFixed(2), W + 4, y + 3);
+    ctx.fillStyle = '#44445a'; ctx.font = '10px monospace';
+    ctx.fillText((hi - (hi-lo)*i/6).toFixed(2), W+4, y+3);
   }
 
-  // Candles
-  for (let i = 0; i < visible.length; i++) {
-    const c = visible[i];
-    const x = i * cw + cw / 2;
-    const isUp = c.c >= c.o;
-    const color = isUp ? '#26a69a' : '#ef5350';
-
-    ctx.strokeStyle = color;
-    ctx.fillStyle = color;
-    ctx.lineWidth = 1;
-
-    // Wick
-    ctx.beginPath();
-    ctx.moveTo(x, pToY(c.h));
-    ctx.lineTo(x, pToY(c.l));
-    ctx.stroke();
-
-    // Body
-    const yTop = pToY(Math.max(c.o, c.c));
-    const yBot = pToY(Math.min(c.o, c.c));
-    const bodyH = Math.max(1, yBot - yTop);
-    if (isUp) {
-      ctx.strokeRect(x - bw/2, yTop, bw, bodyH);
-    } else {
-      ctx.fillRect(x - bw/2, yTop, bw, bodyH);
+  // Separador del día actual
+  if (dayStartIdx >= 0) {
+    const startVis = Math.max(0, replayEnd - VISIBLE + 1);
+    const relIdx = dayStartIdx - startVis;
+    if (relIdx >= 0 && relIdx < vis.length) {
+      const x = relIdx * cw;
+      ctx.strokeStyle = 'rgba(255,213,79,.25)'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(255,213,79,.5)'; ctx.font = '10px monospace';
+      ctx.fillText(DAYS[currentDayIdx], x+3, 14);
     }
   }
 
-  // Levels
+  // Velas
+  for (let i = 0; i < vis.length; i++) {
+    const c  = vis[i];
+    const x  = i * cw + cw / 2;
+    const up = c.c >= c.o;
+    ctx.strokeStyle = up ? '#26a69a' : '#ef5350';
+    ctx.fillStyle   = up ? '#26a69a' : '#ef5350';
+    ctx.lineWidth   = 1;
+    ctx.beginPath(); ctx.moveTo(x, pY(c.h)); ctx.lineTo(x, pY(c.l)); ctx.stroke();
+    const yT = pY(Math.max(c.o, c.c));
+    const yB = pY(Math.min(c.o, c.c));
+    const bh = Math.max(1, yB - yT);
+    if (up) ctx.strokeRect(x-bw/2, yT, bw, bh);
+    else    ctx.fillRect(x-bw/2, yT, bw, bh);
+  }
+
+  // Niveles dibujados
+  ctx.setLineDash([4,4]);
   for (const lv of levels) {
-    const y = pToY(lv.price);
-    ctx.strokeStyle = lv.color || '#ffd54f';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
+    const y = pY(lv.p);
+    ctx.strokeStyle = lv.col; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = lv.color || '#ffd54f';
-    ctx.font = '10px monospace';
-    ctx.fillText(lv.price.toFixed(2), W + 4, y + 3);
+    ctx.fillStyle = lv.col; ctx.font = '10px monospace';
+    ctx.fillText(lv.p.toFixed(2), W+4, y+3);
   }
+  ctx.setLineDash([]);
 
-  // Trade lines
+  // Líneas del trade activo
   if (trade) {
-    // Entry
-    const ey = pToY(trade.entry);
-    ctx.strokeStyle = '#4a9eff'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
-    ctx.beginPath(); ctx.moveTo(0, ey); ctx.lineTo(W, ey); ctx.stroke();
-    ctx.fillStyle = '#4a9eff'; ctx.font = '10px monospace';
-    ctx.fillText('Entry ' + trade.entry.toFixed(2), 4, ey - 3);
-
-    // TP
-    const ty = pToY(trade.tpPrice);
-    ctx.strokeStyle = '#26a69a'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
-    ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(W, ty); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = '#26a69a';
-    ctx.fillText('TP ' + trade.tpPrice.toFixed(2), 4, ty - 3);
-
-    // SL
-    const sy = pToY(trade.slPrice);
-    ctx.strokeStyle = '#ef5350'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
-    ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(W, sy); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = '#ef5350';
-    ctx.fillText('SL ' + trade.slPrice.toFixed(2), 4, sy - 3);
+    const drawLine = (price, color, label) => {
+      const y = pY(price);
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = color; ctx.font = '10px monospace';
+      ctx.fillText(label + ' ' + price.toFixed(2), 4, y-3);
+    };
+    drawLine(trade.entry, '#4a9eff', 'Entry');
+    drawLine(trade.tpP,   '#26a69a', 'TP');
+    drawLine(trade.slP,   '#ef5350', 'SL');
   }
 
-  // Current price line
-  const last = visible[visible.length - 1];
-  const ly = pToY(last.c);
-  ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1; ctx.setLineDash([2,4]);
+  // Precio actual
+  const last = vis[vis.length - 1];
+  const ly   = pY(last.c);
+  ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.lineWidth=1; ctx.setLineDash([2,4]);
   ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(W, ly); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = last.c >= visible[visible.length-2]?.c ? '#26a69a' : '#ef5350';
-  ctx.fillRect(W, ly - 9, PRICE_SCALE_W, 18);
+  const prev = vis[vis.length-2];
+  ctx.fillStyle = last.c >= (prev?.c ?? last.c) ? '#26a69a' : '#ef5350';
+  ctx.fillRect(W, ly-9, PW, 18);
   ctx.fillStyle = '#fff'; ctx.font = 'bold 11px monospace';
-  ctx.fillText(last.c.toFixed(2), W + 4, ly + 4);
+  ctx.fillText(last.c.toFixed(2), W+4, ly+4);
 
-  // Update date display
-  const dt = new Date(last.t * 1000);
-  const nt = new Date(dt.getTime() + 60*60*1000); // UTC+1
-  document.getElementById('date-display').textContent =
-    nt.toISOString().slice(0,10) + ' ' + nt.toISOString().slice(11,16) + ' NT';
+  // Fecha y precio en topbar
+  const ts = last.t;
+  document.getElementById('date-display').textContent = ntDate(ts) + ' ' + ntTime(ts) + ' NT';
   document.getElementById('price-display').textContent = last.c.toFixed(2);
 
-  // Check trade resolution
+  // Comprobar trade
   if (trade) checkTrade(last);
 }
 
 // ─── TRADE ────────────────────────────────────────────────────────────────────
-function updateParamDisplay() {
-  const contracts = parseInt(document.getElementById('inp-contracts').value) || 5;
-  const tickVal   = 2; // MNQ
-  const ptVal     = contracts * tickVal;
-  const tp_usd    = parseInt(document.getElementById('inp-tp').value) || 2000;
-  const sl_usd    = parseInt(document.getElementById('inp-sl').value) || 2000;
-  const tp_pts    = (tp_usd / ptVal).toFixed(1);
-  const sl_pts    = (sl_usd / ptVal).toFixed(1);
-  document.getElementById('disp-tick').textContent = `1pt=$${ptVal}`;
-  document.getElementById('disp-tp-pts').textContent = `${tp_pts}pts`;
-  document.getElementById('disp-sl-pts').textContent = `${sl_pts}pts`;
+function updateParams() {
+  const c   = +document.getElementById('inp-c').value  || 5;
+  const tp  = +document.getElementById('inp-tp').value || 2000;
+  const sl  = +document.getElementById('inp-sl').value || 2000;
+  const pv  = c * 2;
+  document.getElementById('disp-tick').textContent = `1pt=$${pv}`;
+  document.getElementById('disp-tp').textContent   = `${(tp/pv).toFixed(1)}pts`;
+  document.getElementById('disp-sl').textContent   = `${(sl/pv).toFixed(1)}pts`;
 }
-
-['inp-contracts','inp-tp','inp-sl'].forEach(id =>
-  document.getElementById(id).addEventListener('input', updateParamDisplay));
+['inp-c','inp-tp','inp-sl'].forEach(id => document.getElementById(id).addEventListener('input', updateParams));
 
 function enterTrade(dir) {
   if (trade) return;
-  const contracts = parseInt(document.getElementById('inp-contracts').value) || 5;
-  const tickVal   = 2;
-  const ptVal     = contracts * tickVal;
-  const tp_usd    = parseInt(document.getElementById('inp-tp').value) || 2000;
-  const sl_usd    = parseInt(document.getElementById('inp-sl').value) || 2000;
-  const tp_pts    = tp_usd / ptVal;
-  const sl_pts    = sl_usd / ptVal;
-  const last      = CANDLES[viewEnd];
-  const entry     = last.c;
-
+  const c   = +document.getElementById('inp-c').value  || 5;
+  const tp  = +document.getElementById('inp-tp').value || 2000;
+  const sl  = +document.getElementById('inp-sl').value || 2000;
+  const pv  = c * 2;
+  const entry = CANDLES[replayEnd]?.c;
+  if (!entry) return;
   trade = {
-    dir, entry, contracts, tp_usd, sl_usd,
-    tpPrice: dir === 'LONG' ? entry + tp_pts : entry - tp_pts,
-    slPrice: dir === 'LONG' ? entry - sl_pts : entry + sl_pts,
-    bar: viewEnd
+    dir, c, tp, sl, pv, entry,
+    tpP: dir==='LONG' ? entry + tp/pv : entry - tp/pv,
+    slP: dir==='LONG' ? entry - sl/pv : entry + sl/pv
   };
-
   document.getElementById('btn-long').disabled  = true;
   document.getElementById('btn-short').disabled = true;
   document.getElementById('btn-close').style.display = 'block';
-
   const st = document.getElementById('trade-status');
   st.className = 'open';
-  st.textContent = `${dir} @ ${entry.toFixed(2)} | TP:${trade.tpPrice.toFixed(1)} SL:${trade.slPrice.toFixed(1)}`;
+  st.textContent = `${dir} @ ${entry.toFixed(2)} | TP:${trade.tpP.toFixed(1)} SL:${trade.slP.toFixed(1)}`;
   render();
 }
 
-function checkTrade(candle) {
+function checkTrade(c) {
   if (!trade) return;
-  const { dir, tpPrice, slPrice } = trade;
-  let result = null;
-
+  const { dir, tpP, slP, tp, sl } = trade;
+  let result = null, pnl = 0;
   if (dir === 'LONG') {
-    if (candle.l <= slPrice) result = 'LOSS';
-    else if (candle.h >= tpPrice) result = 'WIN';
+    if (c.l <= slP) { result='LOSS'; pnl=-sl; }
+    else if (c.h >= tpP) { result='WIN';  pnl=+tp; }
   } else {
-    if (candle.h >= slPrice) result = 'LOSS';
-    else if (candle.l <= tpPrice) result = 'WIN';
+    if (c.h >= slP) { result='LOSS'; pnl=-sl; }
+    else if (c.l <= tpP) { result='WIN';  pnl=+tp; }
   }
-
-  if (result) closeTrade(result, result === 'WIN' ? trade.tp_usd : -trade.sl_usd);
+  if (result) closeTrade(result, pnl);
 }
 
 function closeTrade(result, pnl) {
-  if (!result) {
-    // Manual close at current price
-    const last = CANDLES[viewEnd];
-    const diff = (last.c - trade.entry) * (trade.dir === 'LONG' ? 1 : -1);
-    pnl = Math.round(diff * trade.contracts * 2);
+  if (result === null) {
+    // Manual: precio actual
+    const c = CANDLES[replayEnd];
+    const diff = (c.c - trade.entry) * (trade.dir==='LONG'?1:-1);
+    pnl = Math.round(diff * trade.c * 2);
     result = pnl >= 0 ? 'WIN' : 'LOSS';
   }
-
-  const last = CANDLES[viewEnd];
-  const dt = new Date(last.t * 1000 + 3600000);
-  const dateStr = dt.toISOString().slice(0,10);
-
-  if (result === 'WIN') stats.wins++;
-  else stats.losses++;
+  const date = ntDate(CANDLES[replayEnd].t);
+  if (result==='WIN') stats.w++; else stats.l++;
   stats.pnl += pnl;
-  stats.trades.push({ date: dateStr, dir: trade.dir, result, pnl });
-
-  // Update UI
   updateStats();
-  addTradeLog(dateStr, trade.dir, result, pnl);
-
+  addLog(date, trade.dir, result, pnl);
   const st = document.getElementById('trade-status');
-  st.className = result === 'WIN' ? 'win' : 'loss';
-  st.textContent = `${result} ${pnl >= 0 ? '+' : ''}$${pnl.toLocaleString()}`;
-
+  st.className = result==='WIN' ? 'win' : 'loss';
+  st.textContent = `${result} ${pnl>=0?'+':''}$${pnl.toLocaleString()}`;
   trade = null;
   document.getElementById('btn-long').disabled  = false;
   document.getElementById('btn-short').disabled = false;
@@ -515,170 +503,179 @@ function closeTrade(result, pnl) {
 }
 
 function updateStats() {
-  const total = stats.wins + stats.losses;
-  document.getElementById('st-wins').textContent = stats.wins;
-  document.getElementById('st-loss').textContent = stats.losses;
-  document.getElementById('st-wr').textContent   = total ? Math.round(stats.wins/total*100)+'%' : '—';
-  const pnlEl = document.getElementById('st-pnl');
-  pnlEl.textContent = (stats.pnl >= 0 ? '+$' : '-$') + Math.abs(stats.pnl).toLocaleString();
-  pnlEl.style.color = stats.pnl >= 0 ? 'var(--green)' : 'var(--red)';
+  const tot = stats.w + stats.l;
+  document.getElementById('st-w').textContent  = stats.w;
+  document.getElementById('st-l').textContent  = stats.l;
+  document.getElementById('st-wr').textContent = tot ? Math.round(stats.w/tot*100)+'%' : '—';
+  const el = document.getElementById('st-pnl');
+  el.textContent = (stats.pnl>=0?'+$':'-$') + Math.abs(stats.pnl).toLocaleString();
+  el.style.color = stats.pnl>=0 ? 'var(--green)' : 'var(--red)';
 }
 
-function addTradeLog(date, dir, result, pnl) {
+function addLog(date, dir, result, pnl) {
   const log = document.getElementById('trade-log');
-  const div = document.createElement('div');
-  div.className = 'trade-entry';
-  const cls = result === 'WIN' ? 'win-cls' : 'loss-cls';
-  div.innerHTML = `<span class="dir" style="color:${dir==='LONG'?'var(--green)':'var(--red)'}">${dir==='LONG'?'▲':'▼'} ${dir}</span>
-    <span>${date}</span>
+  const d   = document.createElement('div');
+  d.className = 'tentry';
+  const cls = result==='WIN' ? 'win-c' : 'loss-c';
+  const dirColor = dir==='LONG' ? 'var(--green)' : 'var(--red)';
+  d.innerHTML = `<span style="color:${dirColor};font-weight:600">${dir==='LONG'?'▲':'▼'} ${dir}</span>
+    <span style="color:var(--text2)">${date}</span>
     <span class="${cls}">${result} ${pnl>=0?'+':''}$${pnl.toLocaleString()}</span>`;
-  log.insertBefore(div, log.firstChild);
+  log.insertBefore(d, log.firstChild);
 }
 
-// ─── STEP ─────────────────────────────────────────────────────────────────────
+// ─── REPLAY ───────────────────────────────────────────────────────────────────
 function step() {
-  if (viewEnd < CANDLES.length - 1) {
-    viewEnd++;
+  if (replayEnd < CANDLES.length - 1) {
+    replayEnd++;
     render();
   }
 }
 
-function stepBack() {
-  if (viewEnd > VISIBLE) {
-    viewEnd--;
+function startReplay() {
+  if (isReplaying) { stopReplay(); return; }
+  // Ir al inicio del día y reproducir
+  if (dayStartIdx < 0) return;
+  replayEnd = dayStartIdx;
+  isReplaying = true;
+  document.getElementById('btn-replay').textContent = '⏸ Pausa';
+  const speed = +document.getElementById('replay-speed').value;
+  const end   = findDayEnd(currentDayIdx);
+
+  replayTimer = setInterval(() => {
+    if (replayEnd >= end) { stopReplay(); return; }
+    replayEnd++;
     render();
-  }
+    // Comprobar si el trade se resolvió
+  }, speed);
 }
 
-// ─── PLAY ─────────────────────────────────────────────────────────────────────
-document.getElementById('btn-play').addEventListener('click', () => {
-  playing = !playing;
-  document.getElementById('btn-play').textContent = playing ? '⏸ Pausa' : '▶ Play';
-  if (playing) {
-    const speed = parseInt(document.getElementById('speed-sel').value);
-    playTimer = setInterval(() => { step(); if (viewEnd >= CANDLES.length - 1) { playing = false; clearInterval(playTimer); document.getElementById('btn-play').textContent = '▶ Play'; } }, speed);
-  } else {
-    clearInterval(playTimer);
+function stopReplay() {
+  clearInterval(replayTimer);
+  isReplaying = false;
+  document.getElementById('btn-replay').textContent = '▶ Replay día';
+}
+
+function findDayEnd(dayIdx) {
+  const day = DAYS[dayIdx];
+  let last = dayStartIdx;
+  for (let i = dayStartIdx; i < CANDLES.length; i++) {
+    if (ntDate(CANDLES[i].t) !== day) break;
+    last = i;
   }
-});
+  return last;
+}
 
-document.getElementById('btn-step').addEventListener('click', step);
+function prevDay() {
+  stopReplay();
+  if (trade) closeTrade(null, null);
+  levels = [];
+  setDay(currentDayIdx - 1, true);
+}
 
+function nextDay() {
+  stopReplay();
+  if (trade) closeTrade(null, null);
+  levels = [];
+  setDay(currentDayIdx + 1, true);
+}
+
+// ─── EVENTOS ──────────────────────────────────────────────────────────────────
 document.getElementById('btn-go').addEventListener('click', () => {
-  jumpToDate(document.getElementById('date-input').value);
+  stopReplay();
+  goToDate(document.getElementById('date-input').value);
 });
-
+document.getElementById('btn-replay').addEventListener('click', startReplay);
+document.getElementById('btn-step').addEventListener('click', step);
+document.getElementById('btn-prev-day').addEventListener('click', prevDay);
+document.getElementById('btn-next-day').addEventListener('click', nextDay);
 document.getElementById('btn-long').addEventListener('click',  () => enterTrade('LONG'));
 document.getElementById('btn-short').addEventListener('click', () => enterTrade('SHORT'));
 document.getElementById('btn-close').addEventListener('click', () => closeTrade(null, null));
+document.getElementById('btn-zoom-in').addEventListener('click',  () => { VISIBLE = Math.max(10, VISIBLE-10); render(); });
+document.getElementById('btn-zoom-out').addEventListener('click', () => { VISIBLE = Math.min(300, VISIBLE+10); render(); });
+document.querySelectorAll('.tf-btn').forEach(b => b.addEventListener('click', () => setTF(b.dataset.tf)));
 
-// ─── TF BUTTONS ───────────────────────────────────────────────────────────────
-document.querySelectorAll('.tf-btn').forEach(btn => {
-  btn.addEventListener('click', () => setTF(btn.dataset.tf));
-});
-
-// ─── KEYBOARD ─────────────────────────────────────────────────────────────────
+// Teclado
 document.addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT') return;
-  if (e.code === 'Space') { e.preventDefault(); step(); }
-  if (e.code === 'ArrowRight') step();
-  if (e.code === 'ArrowLeft')  stepBack();
-  if (e.key === 'l' || e.key === 'L') { drawingLevel = !drawingLevel; canvas.style.cursor = drawingLevel ? 'crosshair' : 'default'; }
-  if (e.key === 'x' || e.key === 'X') { levels = []; render(); }
-  if (e.key === '1') setTF('m130');
-  if (e.key === '2') setTF('m15');
-  if (e.key === '3') setTF('m5');
+  if (e.target.tagName==='INPUT') return;
+  if (e.code==='Space')       { e.preventDefault(); step(); }
+  if (e.code==='ArrowRight')  { if (e.shiftKey) nextDay(); else step(); }
+  if (e.code==='ArrowLeft')   { if (e.shiftKey) prevDay(); else { replayEnd = Math.max(VISIBLE, replayEnd-1); render(); } }
+  if (e.key==='l'||e.key==='L') drawingLevel = !drawingLevel;
+  if (e.key==='x'||e.key==='X') { levels=[]; render(); }
+  if (e.key==='1') setTF('m130');
+  if (e.key==='2') setTF('m15');
+  if (e.key==='3') setTF('m5');
 });
 
-// ─── MOUSE ────────────────────────────────────────────────────────────────────
-// mousemove integrado en el bloque de pan/drag más abajo
-
-canvas.addEventListener('click', e => {
-  if (!drawingLevel) return;
-  const rect = canvas.getBoundingClientRect();
-  const y = e.clientY - rect.top;
-  const H = canvas.height - PADDING_TOP - PADDING_BOT;
-  const visible = getVisible();
-  let lo = Infinity, hi = -Infinity;
-  for (const c of visible) { lo = Math.min(lo, c.l); hi = Math.max(hi, c.h); }
-  const range = hi - lo || 10;
-  lo -= range*0.05; hi += range*0.05;
-  const price = hi - ((y - PADDING_TOP) / H) * (hi - lo);
-  const colors = ['#ffd54f', '#4a9eff', '#ef5350', '#26a69a', '#ce93d8'];
-  levels.push({ price, color: colors[levels.length % colors.length] });
-  render();
-});
-
-// Scroll para navegar
-// ─── ZOOM con scroll ─────────────────────────────────────────────────────────
-canvas.addEventListener('wheel', e => {
-  e.preventDefault();
-  if (e.ctrlKey || e.metaKey) {
-    // Zoom: ctrl+scroll
-    if (e.deltaY < 0) VISIBLE = Math.max(10, VISIBLE - 5);
-    else              VISIBLE = Math.min(200, VISIBLE + 5);
-    render();
-  } else {
-    // Pan: scroll normal
-    const delta = e.deltaY > 0 ? 3 : -3;
-    viewEnd = Math.max(VISIBLE, Math.min(CANDLES.length - 1, viewEnd + delta));
-    render();
-  }
-}, { passive: false });
-
-// ─── PAN con click + arrastrar ────────────────────────────────────────────────
-let isDragging = false;
-let dragStartX = 0;
-let dragStartViewEnd = 0;
-
-canvas.addEventListener('mousedown', e => {
-  if (drawingLevel) return;
-  isDragging = true;
-  dragStartX = e.clientX;
-  dragStartViewEnd = viewEnd;
-  canvas.style.cursor = 'grabbing';
-});
-
+// Mouse crosshair
 canvas.addEventListener('mousemove', e => {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
-  document.getElementById('crosshair-h').style.top  = y + 'px';
-  document.getElementById('crosshair-v').style.left = x + 'px';
-
-  // Price at cursor
-  const H = canvas.height - PADDING_TOP - PADDING_BOT;
-  const visible = getVisible();
-  if (!visible.length) return;
-  let lo = Infinity, hi = -Infinity;
-  for (const c of visible) { lo = Math.min(lo, c.l); hi = Math.max(hi, c.h); }
-  if (trade) { lo = Math.min(lo, trade.slPrice); hi = Math.max(hi, trade.tpPrice); }
-  const range = hi - lo || 10;
-  lo -= range*0.05; hi += range*0.05;
-  const price = hi - ((y - PADDING_TOP) / H) * (hi - lo);
+  document.getElementById('crosshair-h').style.top  = y+'px';
+  document.getElementById('crosshair-v').style.left = x+'px';
+  const H = canvas.height-PT-PB;
+  const vis = getVisible();
+  if (!vis.length) return;
+  let lo=Infinity,hi=-Infinity;
+  for(const c of vis){lo=Math.min(lo,c.l);hi=Math.max(hi,c.h);}
+  if(trade){lo=Math.min(lo,trade.slP,trade.tpP);hi=Math.max(hi,trade.slP,trade.tpP);}
+  const range=hi-lo||10; lo-=range*.06; hi+=range*.06;
+  const price = hi - ((y-PT)/H)*(hi-lo);
   document.getElementById('price-display').textContent = price.toFixed(2);
-
-  // Pan
-  if (isDragging && !drawingLevel) {
-    const W = canvas.width - PRICE_SCALE_W;
-    const cw = W / VISIBLE;
-    const deltaCandles = Math.round((dragStartX - e.clientX) / cw);
-    viewEnd = Math.max(VISIBLE, Math.min(CANDLES.length - 1, dragStartViewEnd + deltaCandles));
+  if (isDragging) {
+    const W = canvas.width-PW;
+    const cw = W/VISIBLE;
+    const delta = Math.round((dragX - e.clientX)/cw);
+    replayEnd = Math.max(VISIBLE, Math.min(CANDLES.length-1, dragEnd+delta));
     render();
   }
 });
 
+// Click para dibujar nivel
+canvas.addEventListener('click', e => {
+  if (!drawingLevel) return;
+  const rect = canvas.getBoundingClientRect();
+  const y = e.clientY - rect.top;
+  const H = canvas.height-PT-PB;
+  const vis = getVisible();
+  let lo=Infinity,hi=-Infinity;
+  for(const c of vis){lo=Math.min(lo,c.l);hi=Math.max(hi,c.h);}
+  const range=hi-lo||10; lo-=range*.06; hi+=range*.06;
+  const price = hi - ((y-PT)/H)*(hi-lo);
+  const cols = ['#ffd54f','#4a9eff','#ef5350','#26a69a','#ce93d8','#ff8a65'];
+  levels.push({p:price, col:cols[levels.length%cols.length]});
+  render();
+});
+
+// Scroll = zoom (ctrl) o navegar
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  if (e.ctrlKey) {
+    VISIBLE = e.deltaY<0 ? Math.max(10,VISIBLE-5) : Math.min(300,VISIBLE+5);
+  } else {
+    const d = e.deltaY>0 ? 3 : -3;
+    replayEnd = Math.max(VISIBLE, Math.min(CANDLES.length-1, replayEnd+d));
+  }
+  render();
+}, {passive:false});
+
+// Pan
+let isDragging=false, dragX=0, dragEnd=0;
+canvas.addEventListener('mousedown', e => {
+  if (drawingLevel) return;
+  isDragging=true; dragX=e.clientX; dragEnd=replayEnd;
+  canvas.style.cursor='grabbing';
+});
 window.addEventListener('mouseup', () => {
-  isDragging = false;
+  isDragging=false;
   canvas.style.cursor = drawingLevel ? 'crosshair' : 'default';
 });
 
-// ─── ZOOM con botones +/- en sidebar ─────────────────────────────────────────
-document.getElementById('btn-zoom-in').addEventListener('click',  () => { VISIBLE = Math.max(10, VISIBLE - 10); render(); });
-document.getElementById('btn-zoom-out').addEventListener('click', () => { VISIBLE = Math.min(200, VISIBLE + 10); render(); });
-
-// Export trades
-window.getTradeData = () => JSON.stringify(stats.trades, null, 2);
+// Export
+window.getTradeData = () => JSON.stringify({ stats, trades: document.getElementById('trade-log').innerText });
 </script>
 </body>
 </html>
