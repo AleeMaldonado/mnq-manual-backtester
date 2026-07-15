@@ -343,7 +343,10 @@ function render() {
   lo -= range * .06; hi += range * .06;
   const pY = p => PT + (1 - (p - lo) / (hi - lo)) * H;
 
-  const cw = W / vis.length;
+  // Espacio derecho — últimas N velas vacías (como NinjaTrader)
+  const RIGHT_BARS = 8;
+  const totalBars  = vis.length + RIGHT_BARS;
+  const cw = W / totalBars;
   const bw = Math.max(1, cw * .65);
 
   // Grid
@@ -360,7 +363,7 @@ function render() {
     const startVis = Math.max(0, replayEnd - VISIBLE + 1);
     const relIdx = dayStartIdx - startVis;
     if (relIdx >= 0 && relIdx < vis.length) {
-      const x = relIdx * cw;
+      const x = relIdx * cw; // usa el mismo cw calculado arriba
       ctx.strokeStyle = 'rgba(255,213,79,.25)'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
       ctx.setLineDash([]);
@@ -383,6 +386,20 @@ function render() {
     const bh = Math.max(1, yB - yT);
     if (up) ctx.strokeRect(x-bw/2, yT, bw, bh);
     else    ctx.fillRect(x-bw/2, yT, bw, bh);
+
+    // Etiqueta de hora en eje X (cada N velas según zoom)
+    const labelEvery = cw < 8 ? 12 : cw < 14 ? 8 : cw < 20 ? 4 : 2;
+    if (i % labelEvery === 0) {
+      const timeStr = ntTime(c.t);
+      ctx.fillStyle = '#555566';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(timeStr, x, canvas.height - PB + 14);
+      ctx.textAlign = 'left';
+      // Línea vertical sutil
+      ctx.strokeStyle = '#1e1e28'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, PT); ctx.lineTo(x, canvas.height - PB); ctx.stroke();
+    }
   }
 
   // Niveles dibujados
@@ -411,17 +428,24 @@ function render() {
     drawLine(trade.slP,   '#ef5350', 'SL');
   }
 
-  // Precio actual
+  // Precio actual — línea punteada hasta el espacio derecho
   const last = vis[vis.length - 1];
   const ly   = pY(last.c);
   ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.lineWidth=1; ctx.setLineDash([2,4]);
   ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(W, ly); ctx.stroke();
   ctx.setLineDash([]);
   const prev = vis[vis.length-2];
-  ctx.fillStyle = last.c >= (prev?.c ?? last.c) ? '#26a69a' : '#ef5350';
+  const lastUp = last.c >= (prev?.c ?? last.c);
+  ctx.fillStyle = lastUp ? '#26a69a' : '#ef5350';
   ctx.fillRect(W, ly-9, PW, 18);
   ctx.fillStyle = '#fff'; ctx.font = 'bold 11px monospace';
   ctx.fillText(last.c.toFixed(2), W+4, ly+4);
+  // Triángulo precio en el espacio derecho
+  const lastX = (vis.length - 1) * cw + cw/2;
+  ctx.strokeStyle = lastUp ? '#26a69a' : '#ef5350';
+  ctx.lineWidth = 1; ctx.setLineDash([2,3]);
+  ctx.beginPath(); ctx.moveTo(lastX, ly); ctx.lineTo(W, ly); ctx.stroke();
+  ctx.setLineDash([]);
 
   // Fecha y precio en topbar y bottombar
   const ts = last.t;
