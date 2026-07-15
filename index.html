@@ -84,6 +84,8 @@ input[type=date]{flex:1}
   <h1>MNQ BT</h1>
   <div class="sep"></div>
   <button class="tf-btn" data-tf="m130">M130</button>
+  <div class="sep"></div>
+  <button class="tf-btn" id="btn-stats-tab" onclick="showStatsPanel()">📊 Análisis</button>
   <button class="tf-btn active" data-tf="m15">M15</button>
   <button class="tf-btn" data-tf="m5">M5</button>
   <div class="sep"></div>
@@ -164,6 +166,13 @@ input[type=date]{flex:1}
         <div class="stat-box"><div class="stat-val" style="color:var(--blue)" id="st-wr">—</div><div class="stat-lbl">Win Rate</div></div>
         <div class="stat-box"><div class="stat-val" id="st-pnl">$0</div><div class="stat-lbl">PnL</div></div>
       </div>
+    </div>
+
+    <!-- ANÁLISIS -->
+    <div class="panel">
+      <div class="ptitle">Análisis estadístico</div>
+      <button class="btn-blue" id="btn-run-analysis" style="width:100%;padding:8px;margin-bottom:6px" onclick="runAnalysis()">🔍 Comparar vs aleatoria</button>
+      <div id="analysis-result" style="font-size:11px;color:var(--text2);line-height:1.6"></div>
     </div>
 
     <!-- LOG -->
@@ -722,6 +731,176 @@ window.addEventListener('mouseup', () => {
 
 // Export
 window.getTradeData = () => JSON.stringify({ stats, trades: document.getElementById('trade-log').innerText });
+
+// ─── ANÁLISIS ESTADÍSTICO ─────────────────────────────────────────────────────
+function runAnalysis() {
+  if (!ALL_CANDLES.m15 || !ALL_CANDLES.m5 || !ALL_CANDLES.m15.length) {
+    document.getElementById('analysis-result').textContent = 'Carga los datos primero.';
+    return;
+  }
+
+  const el = document.getElementById('analysis-result');
+  el.textContent = 'Calculando...';
+
+  setTimeout(() => {
+    const c15 = ALL_CANDLES.m15;
+    const c5  = ALL_CANDLES.m5;
+    const c1  = ALL_CANDLES.m5; // usamos m5 para simular 1min
+
+    // Parámetros
+    const CONTRACTS = 5;
+    const TICK      = 2;
+    const TP_USD    = 2000;
+    const SL_USD    = 2000;
+    const TP_PTS    = TP_USD / (CONTRACTS * TICK); // 200pts
+    const SL_PTS    = SL_USD / (CONTRACTS * TICK); // 200pts
+    const NY_START  = 14; // 14:30 UTC = 15:30 NT
+    const NY_END    = 18;
+    const LOOKBACK  = 4;  // velas M15 atrás para swing
+
+    // Agrupar por día
+    const days15 = {}, days5 = {};
+    for (const c of c15) {
+      const d = ntDate(c.t);
+      if (!days15[d]) days15[d] = [];
+      days15[d].push(c);
+    }
+    for (const c of c5) {
+      const d = ntDate(c.t);
+      if (!days5[d]) days5[d] = [];
+      days5[d].push(c);
+    }
+
+    const dates = Object.keys(days15).sort();
+    let structural = { w:0, l:0, nc:0 };
+    let random     = { w:0, l:0, nc:0 };
+
+    for (const date of dates) {
+      const dc15 = days15[date] || [];
+      const dc5  = days5[date]  || [];
+      const dt   = new Date(date + 'T00:00:00Z');
+      if (dt.getUTCDay() === 0 || dt.getUTCDay() === 6) continue;
+
+      // Sesión NY en M15
+      const sess15 = dc15.filter(c => {
+        const h = new Date(c.t * 1000).getUTCHours();
+        return h >= NY_START && h < NY_END;
+      });
+      const sess5 = dc5.filter(c => {
+        const h = new Date(c.t * 1000).getUTCHours();
+        return h >= NY_START && h < NY_END;
+      });
+
+      if (sess15.length < LOOKBACK + 1 || sess5.length < 3) continue;
+
+      // ── ENTRADA ESTRUCTURAL ──────────────────────────────────────────────
+      // Detectar swing high/low en M15 y esperar ruptura confirmada en M5
+      let entryBar = null, isLong = null;
+
+      for (let i = LOOKBACK; i < sess15.length; i++) {
+        const recent   = sess15.slice(Math.max(0, i - LOOKBACK), i);
+        const swingH   = Math.max(...recent.map(c => c.h));
+        const swingL   = Math.min(...recent.map(c => c.l));
+        const curr15   = sess15[i];
+
+        // Buscar vela M5 que rompe y confirma
+        const m15Open  = curr15.t - 15 * 60;
+        const m5InBar  = sess5.filter(c => c.t > m15Open && c.t <= curr15.t);
+
+        for (const m5 of m5InBar) {
+          if (m5.h > swingH && m5.c > swingH) {
+            // Ruptura confirmada hacia arriba → LONG
+            entryBar = m5; isLong = true; break;
+          }
+          if (m5.l < swingL && m5.c < swingL) {
+            // Ruptura confirmada hacia abajo → SHORT
+            entryBar = m5; isLong = false; break;
+          }
+        }
+        if (entryBar) break;
+      }
+
+      if (entryBar) {
+        const entry = entryBar.c;
+        const tpP   = isLong ? entry + TP_PTS : entry - TP_PTS;
+        const slP   = isLong ? entry - SL_PTS : entry + SL_PTS;
+        let result  = 'nc';
+
+        const after5 = sess5.filter(c => c.t > entryBar.t);
+        for (const bar of after5) {
+          if (isLong  && bar.l <= slP) { result='l'; break; }
+          if (isLong  && bar.h >= tpP) { result='w'; break; }
+          if (!isLong && bar.h >= slP) { result='l'; break; }
+          if (!isLong && bar.l <= tpP) { result='w'; break; }
+        }
+        structural[result]++;
+      }
+
+      // ── ENTRADA ALEATORIA ────────────────────────────────────────────────
+      // Entrar a las 15:45 NT (14:45 UTC) en dirección aleatoria
+      const randBar = sess5.find(c => {
+        const h = new Date(c.t * 1000).getUTCHours();
+        const m = new Date(c.t * 1000).getUTCMinutes();
+        return h === 14 && m === 45;
+      });
+
+      if (randBar) {
+        // Dirección basada en si la vela es alcista o bajista (pseudo-aleatoria reproducible)
+        const randLong = randBar.c >= randBar.o;
+        const entry    = randBar.c;
+        const tpP      = randLong ? entry + TP_PTS : entry - TP_PTS;
+        const slP      = randLong ? entry - SL_PTS : entry + SL_PTS;
+        let result     = 'nc';
+
+        const afterR = sess5.filter(c => c.t > randBar.t);
+        for (const bar of afterR) {
+          if (randLong  && bar.l <= slP) { result='l'; break; }
+          if (randLong  && bar.h >= tpP) { result='w'; break; }
+          if (!randLong && bar.h >= slP) { result='l'; break; }
+          if (!randLong && bar.l <= tpP) { result='w'; break; }
+        }
+        random[result]++;
+      }
+    }
+
+    // Resultados
+    const sTotal = structural.w + structural.l;
+    const rTotal = random.w + random.l;
+    const sWR    = sTotal > 0 ? (structural.w / sTotal * 100).toFixed(1) : 0;
+    const rWR    = rTotal > 0 ? (random.w     / rTotal * 100).toFixed(1) : 0;
+    const sPnL   = (structural.w - structural.l) * TP_USD;
+    const rPnL   = (random.w     - random.l)     * TP_USD;
+
+    // Con ratio 1:1 necesitas >50% WR para ser rentable
+    const edge = parseFloat(sWR) - parseFloat(rWR);
+    const hasEdge = parseFloat(sWR) > 50 && edge > 2;
+
+    el.innerHTML = `
+      <div style="margin-bottom:8px;padding:6px 8px;border-radius:4px;background:${hasEdge?'rgba(38,166,154,.15)':'rgba(239,83,80,.15)'};border:1px solid ${hasEdge?'rgba(38,166,154,.4)':'rgba(239,83,80,.4)'}">
+        <strong style="color:${hasEdge?'var(--green)':'var(--red)'}">${hasEdge?'✅ HAY EDGE':'❌ SIN EDGE CLARO'}</strong>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <tr style="color:var(--text2)"><td></td><td style="text-align:center">Tu entrada</td><td style="text-align:center">Aleatoria</td></tr>
+        <tr><td style="color:var(--text2)">Trades</td><td style="text-align:center">${sTotal}</td><td style="text-align:center">${rTotal}</td></tr>
+        <tr><td style="color:var(--text2)">WIN</td><td style="text-align:center;color:var(--green)">${structural.w}</td><td style="text-align:center;color:var(--green)">${random.w}</td></tr>
+        <tr><td style="color:var(--text2)">LOSS</td><td style="text-align:center;color:var(--red)">${structural.l}</td><td style="text-align:center;color:var(--red)">${random.l}</td></tr>
+        <tr><td style="color:var(--text2)">WR%</td>
+          <td style="text-align:center;font-weight:600;color:${parseFloat(sWR)>50?'var(--green)':'var(--red)'}">${sWR}%</td>
+          <td style="text-align:center;font-weight:600;color:${parseFloat(rWR)>50?'var(--green)':'var(--red)'}">${rWR}%</td>
+        </tr>
+        <tr><td style="color:var(--text2)">PnL</td>
+          <td style="text-align:center;color:${sPnL>=0?'var(--green)':'var(--red)'}">${sPnL>=0?'+':''}$${sPnL.toLocaleString()}</td>
+          <td style="text-align:center;color:${rPnL>=0?'var(--green)':'var(--red)'}">${rPnL>=0?'+':''}$${rPnL.toLocaleString()}</td>
+        </tr>
+        <tr><td style="color:var(--text2)">NC</td><td style="text-align:center">${structural.nc}</td><td style="text-align:center">${random.nc}</td></tr>
+      </table>
+      <div style="margin-top:6px;color:var(--text2);font-size:10px">
+        Edge vs aleatoria: <strong style="color:${edge>0?'var(--green)':'var(--red)'}">${edge>0?'+':''}${edge.toFixed(1)}% WR</strong><br>
+        Params: 5 MNQ · TP/SL $${TP_USD} · NY open 15:45 NT
+      </div>
+    `;
+  }, 50);
+}
 </script>
 </body>
 </html>
