@@ -564,14 +564,19 @@ function step() {
 
 function startReplay() {
   if (isReplaying) { stopReplay(); return; }
+  if (!CANDLES.length) return;
   const end = findDayEnd(currentDayIdx);
-  if (replayEnd >= end) return; // ya estamos al final
+  // Si ya estamos al final del día, volver al inicio del día para reproducir
+  if (replayEnd >= end) {
+    replayEnd = dayStartIdx > 0 ? dayStartIdx : Math.max(0, end - 50);
+  }
   isReplaying = true;
   document.getElementById('btn-replay').textContent = '⏸ Pausa';
-  const speed = +document.getElementById('replay-speed').value;
+  const speed = +document.getElementById('replay-speed').value || 100;
 
   replayTimer = setInterval(() => {
-    if (replayEnd >= end) { stopReplay(); return; }
+    const dayEnd = findDayEnd(currentDayIdx);
+    if (replayEnd >= dayEnd) { stopReplay(); return; }
     replayEnd++;
     render();
   }, speed);
@@ -689,20 +694,18 @@ canvas.addEventListener('click', e => {
 // Scroll = zoom (ctrl) o navegar
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
+  // Scroll normal = zoom (no mueve replayEnd)
+  // Ctrl+scroll = navegar hacia atrás en el historial
   if (e.ctrlKey) {
-    // Solo cambiar zoom visual, no mover la vista
-    const oldVisible = VISIBLE;
-    VISIBLE = e.deltaY<0 ? Math.max(10,VISIBLE-5) : Math.min(300,VISIBLE+5);
-    // replayEnd no cambia — el punto de vista se mantiene igual
-    render();
-  } else {
-    // Solo permitir scroll hacia atrás — el futuro siempre oculto
     const dayEnd = findDayEnd(currentDayIdx);
-    const d = e.deltaY>0 ? 3 : -3;
-    // No pasar del fin del día actual
-    replayEnd = Math.max(VISIBLE, Math.min(dayEnd, replayEnd+d));
-    render();
+    const d = e.deltaY > 0 ? 3 : -3;
+    replayEnd = Math.max(VISIBLE, Math.min(dayEnd, replayEnd + d));
+  } else {
+    // Zoom visual puro — replayEnd no cambia
+    if (e.deltaY < 0) VISIBLE = Math.max(10,  VISIBLE - 5);
+    else               VISIBLE = Math.min(300, VISIBLE + 5);
   }
+  render();
 }, {passive:false});
 
 // Pan
