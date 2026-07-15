@@ -564,13 +564,11 @@ function step() {
 
 function startReplay() {
   if (isReplaying) { stopReplay(); return; }
-  // Ir al inicio del día y reproducir
-  if (dayStartIdx < 0) return;
-  replayEnd = dayStartIdx;
+  const end = findDayEnd(currentDayIdx);
+  if (replayEnd >= end) return; // ya estamos al final
   isReplaying = true;
   document.getElementById('btn-replay').textContent = '⏸ Pausa';
   const speed = +document.getElementById('replay-speed').value;
-  const end   = findDayEnd(currentDayIdx);
 
   replayTimer = setInterval(() => {
     if (replayEnd >= end) { stopReplay(); return; }
@@ -621,8 +619,14 @@ document.getElementById('btn-next-day').addEventListener('click', nextDay);
 document.getElementById('btn-long').addEventListener('click',  () => enterTrade('LONG'));
 document.getElementById('btn-short').addEventListener('click', () => enterTrade('SHORT'));
 document.getElementById('btn-close').addEventListener('click', () => closeTrade(null, null));
-document.getElementById('btn-zoom-in').addEventListener('click',  () => { VISIBLE = Math.max(10, VISIBLE-10); render(); });
-document.getElementById('btn-zoom-out').addEventListener('click', () => { VISIBLE = Math.min(300, VISIBLE+10); render(); });
+document.getElementById('btn-zoom-in').addEventListener('click', () => {
+  VISIBLE = Math.max(10, VISIBLE - 10);
+  render();
+});
+document.getElementById('btn-zoom-out').addEventListener('click', () => {
+  VISIBLE = Math.min(300, VISIBLE + 10);
+  render();
+});
 document.querySelectorAll('.tf-btn').forEach(b => b.addEventListener('click', () => setTF(b.dataset.tf)));
 
 // Teclado
@@ -686,7 +690,10 @@ canvas.addEventListener('click', e => {
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
   if (e.ctrlKey) {
+    // Solo cambiar zoom visual, no mover la vista
+    const oldVisible = VISIBLE;
     VISIBLE = e.deltaY<0 ? Math.max(10,VISIBLE-5) : Math.min(300,VISIBLE+5);
+    // replayEnd no cambia — el punto de vista se mantiene igual
     render();
   } else {
     // Solo permitir scroll hacia atrás — el futuro siempre oculto
